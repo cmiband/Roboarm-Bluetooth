@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="BluetoothConnection.vcxproj" />
+  <Project Path="BluetoothConnection.vcxproj" Id="e20f40d7-312e-4137-a94f-ce813b2ac839" />
 </Solution>
