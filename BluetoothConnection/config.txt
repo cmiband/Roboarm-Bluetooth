@@ -1,0 +1,4 @@
+serverAddress=ws://localhost
+port=8080
+socketEndpoint=ws
+deviceName=HC-05
