@@ -74,19 +74,73 @@ void BluetoothManager::parseConfigurationFile(std::string fileName) {
     file.close();
 }
 
+bool BluetoothManager::pairDevice() {
+    this->bluetoothSocket = socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
+    if (this->bluetoothSocket == INVALID_SOCKET) {
+        return false;
+    }
+
+    SOCKADDR_BTH addr = { 0 };
+    addr.addressFamily = AF_BTH;
+    addr.btAddr = this->deviceAddress.ullLong;
+    addr.serviceClassId = SerialPortServiceClass_UUID;
+    addr.port = 1;
+
+    if (connect(this->bluetoothSocket, (SOCKADDR*)&addr, sizeof(addr)) == SOCKET_ERROR) {
+        std::cerr << "connect() failed: " << WSAGetLastError() << std::endl;
+        closesocket(this->bluetoothSocket);
+        return false;
+    }
+
+    return true;
+}
+
+bool BluetoothManager::sendDataToMicrocontroller(std::string data) {
+    const char* dataToSend = data.c_str();
+    int sent = send(this->bluetoothSocket, dataToSend, static_cast<int>(data.size()), 0);
+    if (sent == SOCKET_ERROR) {
+        std::cerr << "send() failed: " << WSAGetLastError() << std::endl;
+    }
+    else {
+        std::cout << "Wyslano " << sent << " bajtow\n";
+    }
+    std::cout << "3" << std::endl;
+    return true;
+}
+
 BluetoothManager::BluetoothManager(std::string configurationFileName) {
     this->parseConfigurationFile(configurationFileName);
-    this->findPairedDeviceAddress(std::wstring(this->deviceName.begin(), this->deviceName.end()).c_str(), this->deviceAddress);
+    bool deviceFound = this->findPairedDeviceAddress(std::wstring(this->deviceName.begin(), this->deviceName.end()).c_str(), this->deviceAddress);
+    if (!deviceFound) {
+        std::cout << "Unable to find desired device";
+        return;
+    }
+    bool devicePaired = this->pairDevice();
+    if (!devicePaired) {
+        std::cout << "Unalbe to pair device" << std::endl;
+        return;
+    }
     
-    this->localServer.WebSocket("/"+this->socketEndpoint, [](const httplib::Request& req, httplib::ws::WebSocket& ws) {
+    this->localServer.WebSocket("/"+this->socketEndpoint, [this](const httplib::Request& req, httplib::ws::WebSocket& ws) {
         std::string msg;
         while (ws.read(msg)) {
             std::cout << msg << std::endl;
-            
+            std::cout << "Sending to STM..." << std::endl;
+            this->sendDataToMicrocontroller(msg);
         }
     });
+
+    this->configurationSuccessful = true;
+}
+
+BluetoothManager::~BluetoothManager() {
+    closesocket(this->bluetoothSocket);
 }
 
 void BluetoothManager::startServer() {
+    if (!this->configurationSuccessful) {
+        return;
+    }
+
     std::cout << this->localServer.listen(this->serverAddress, this->port) << std::endl;
 }

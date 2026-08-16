@@ -14,16 +14,22 @@ class BluetoothManager
 private:
 	BLUETOOTH_ADDRESS deviceAddress;
 	std::string deviceName;
+	SOCKET bluetoothSocket;
 
 	httplib::Server localServer;
 	std::string serverAddress;
 	std::string socketEndpoint;
 	int port;
 
+	bool configurationSuccessful = false;
+
 	bool findPairedDeviceAddress(const wchar_t* nameContains, BLUETOOTH_ADDRESS& outAddr);
+	bool pairDevice();
 	void parseConfigurationFile(std::string fileName);
+	bool sendDataToMicrocontroller(std::string data);
 public:
 	BluetoothManager(std::string configurationFileName);
+	~BluetoothManager();
 	void startServer();
 };
 
